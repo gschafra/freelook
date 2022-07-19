@@ -1,4 +1,4 @@
-const { BrowserWindow, shell, ipcMain, Menu, MenuItem, } = require("electron")
+const { app, BrowserWindow, shell, ipcMain, Menu, MenuItem, session, Notification, screen } = require('electron');
 const CssInjector = require("../js/css-injector")
 const path = require("path")
 const isOnline = require("is-online")
@@ -154,7 +154,110 @@ class MailWindowController {
                     menu.popup()
                 }
             }
+        });
+
+        this.notify = null;
+        this.iconUnread = false;
+
+        this.notifyWin = new BrowserWindow({
+            autoHideMenuBar: true,
+            show: false,
+            frame: false,
+            webPreferences: {
+                nodeIntegration: true
+            }
+        });
+        this.notifyWin.loadURL(`file://${path.join(__dirname, '../view/notify.html')}`);
+        this.notifyWin.setAlwaysOnTop(true);
+
+        let setNotifyTextInjected = (value) => {
+            setNotificationText(value);
+        }
+
+        let showNotifyWindow = (text) => {
+            let display = screen.getPrimaryDisplay();
+            let x2 = display.workArea.x + display.workArea.width;
+            let y2 = display.workArea.x + display.workArea.height;
+            this.notifyWin.setBounds({ x: x2 - 450, y: y2 - 250, width: 450, height: 250 });
+            this.injectFunction(this.notifyWin, setNotifyTextInjected, text);
+            this.notifyWin.show();
+        };
+
+        ipcMain.on('notifyClicked', (event, value) => {
+            this.show();
         })
+
+        ipcMain.on('notifyClosed', (event, value) => {
+            this.notify.close();
+            this.notify = null;
+            this.notifyWin.hide();
+        })
+
+        let setNotify = (visible, text) => {
+            if (this.notify === null && visible) {
+                this.notify = new Notification({
+                    title: 'Outlook',
+                    body: text || 'You have a new e-mail!',
+                    requireInteraction: true
+                });
+                this.notify.on('onclick', () => {
+                    this.show();
+                });
+                this.notify.show();
+                showNotifyWindow(text || 'You have a new e-mail!');
+            } else if (this.notify !== null && !visible) {
+                this.notify.close();
+                this.notify = null;
+                this.notifyWin.hide();
+            }
+        };
+
+        this.win.on('focus', (e) => {
+            if (!this.iconUnread && this.onUpdateUnread) {
+                this.onUpdateUnread(0);
+                setNotify(0);
+            }
+        });
+
+        this.win.webContents.on('page-favicon-updated', (e, icons) => {
+            if (this.onUpdateUnread) {
+                for (var icon of icons)
+                {
+                    if (icon.match(/.*mail-seen\..*/)) {
+                        this.iconUnread = false;
+                        this.onUpdateUnread(0);
+                        setNotify(0);
+                    } else if (icon.match(/.*mail-unseen\..*/)) {
+                        this.iconUnread = true;
+                        this.onUpdateUnread(1);
+                        setNotify(1);
+                    }
+                }
+            }
+        });
+
+        setTimeout(() => {setNotify(1, 'Outlook has started. Please check if you have any new e-mails!')}, 5000);
+
+        session.defaultSession.webRequest.onCompleted({urls:['*://*/*/newmail.mp3']}, (details) => {
+            if (this.onUpdateUnread) {
+                this.onUpdateUnread(1);
+                setNotify(1);
+            }
+        });
+
+        session.defaultSession.webRequest.onCompleted({urls:['*://*/*/reminder.mp3']}, (details) => {
+            if (this.onUpdateUnread) {
+                this.onUpdateUnread(1);
+                setNotify(1, 'Check your calendar!');
+            }
+        });
+    }
+
+    injectFunction (win, func, value) {
+        func = func.toString();
+        func = func.slice(func.indexOf("{") + 1, func.lastIndexOf("}"));
+        func = `((function(value){ ${func} })(${JSON.stringify(value)}))`;
+        win.webContents.executeJavaScript(func);
     }
 
     getHomepageUrl() {
