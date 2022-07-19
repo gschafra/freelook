@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="UTF-8" />
+	<title>Change time</title>
+</head>
+<script>
+	let ipcRenderer;
+	let closing = false;
+
+	function toTime(ms) {
+		let min = Math.round(ms / 1000 / 60);
+		let sign = min < 0 ? '-' : '';
+		min = Math.abs(min);
+		let h = Math.floor(min / 60);
+		min -= 60 * h;
+		if (min < 10) min = '0' + min;
+		return sign + h + ':' + min;
+	}
+
+	function fromTime(text) {
+		text = text.trim();
+		let mul = 1000 * 60;
+		if (text.startsWith('-')) {
+			mul = -mul;
+			text = text.substring(1).trim();
+		}
+		text = text.split(':');
+		if (text.length === 1) {
+			return mul * parseFloat(text[0].trim());
+		} else if (text.length === 2) {
+			return mul * (parseFloat(text[1].trim()) + 60 * parseFloat(text[0].trim()));
+		} else {
+			throw new Error('Invalid time!');
+		}
+	}
+
+
+	window.onload = () => {
+		ipcRenderer = require('electron').ipcRenderer;
+		ipcRenderer.on('work-log-state', (event, state) => {
+			onUpdate(state);
+		});
+		ipcRenderer.send('work-log', { cmd: 'update', state: {} });
+	};
+
+	function onUpdate(state) {
+		if (closing) {
+			ipcRenderer.send('work-log', { cmd: 'end-change' });
+			return;
+		}
+		document.getElementById('current-done').innerText = toTime(state.done);
+		document.getElementById('current-overtime').innerText = toTime(state.overtime);
+		document.getElementById('current-homeTodo').innerText = toTime(state.homeTodo);
+		document.getElementById('current-officeTodo').innerText = toTime(state.officeTodo);
+	}
+
+	function apply() {
+		let fields = ['done', 'overtime', 'homeTodo', 'officeTodo'];
+		let newState = {};
+		let error = false;
+		for (let name of fields) {
+			let e = document.getElementById(name);
+			e.style.backgroundColor = '';
+			let value = e.value.trim();
+			if (value === '') continue;
+			try {
+				let time = fromTime(value);
+				newState[name] = time;
+			} catch (ex) {
+				e.style.backgroundColor = '#FA9';
+				error = true;
+			}
+		}
+		if (error) return;
+		for (let name of fields) {
+			document.getElementById(name).value = '';
+		}
+		ipcRenderer.send('work-log', { cmd: 'update', state: newState });
+	}
+
+	function cancel() {
+		ipcRenderer.send('work-log', { cmd: 'end-change' });
+	}
+
+	function ok() {
+		closing = true;
+		apply();
+	}
+
+</script>
+
+<body>
+	<h1>Change time</h1>
+	<p>Leave empty for no change.</p>
+	<table>
+		<tr>
+			<td>Work done today:</td>
+			<td><input id="done" type="text" value="" /></td>
+			<td id="current-done"></td>
+			<td>[min] - put difference between current time and requested.</td>
+		</tr>
+		<tr>
+			<td>Overtime:</td>
+			<td><input id="overtime" type="text" value="" /></td>
+			<td id="current-overtime"></td>
+			<td>[min]</td>
+		</tr>
+		<tr>
+			<td>Work time at home:</td>
+			<td><input id="homeTodo" type="text" value="" /></td>
+			<td id="current-homeTodo"></td>
+			<td>[min]</td>
+		</tr>
+		<tr>
+			<td>Work time at office:</td>
+			<td><input id="officeTodo" type="text" value="" /></td>
+			<td id="current-officeTodo"></td>
+			<td>[min]</td>
+		</tr>
+	</table>
+	<br><br>
+	<button onclick="apply()">Apply</button>
+	<button onclick="cancel()">Cancel</button>
+	<button onclick="ok()">OK</button>
+</body>
+
+</html>

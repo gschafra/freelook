@@ -1,5 +1,6 @@
 const { app, BrowserWindow, shell, ipcMain, Menu, MenuItem, session, Notification, screen } = require('electron');
 const CssInjector = require("../js/css-injector")
+const workLog = require("../js/work_log")
 const path = require("path")
 const isOnline = require("is-online")
 const contextMenu = require('electron-context-menu')
@@ -45,6 +46,7 @@ class MailWindowController {
             webPreferences: {
                 enableRemoteModule: true,
                 nodeIntegration: true,
+                contextIsolation: false,
                 spellcheck: true,
                 preload: path.join(__dirname, "../js/preload.js"),
             }
@@ -103,7 +105,8 @@ class MailWindowController {
             this.addUnreadNumberObserver()
 
             this.win.show()
-        })
+            workLog.initialize(this.win, path.join(__dirname, '../view'));
+        });
 
         // prevent the app quit, hide the window instead.
         this.win.on("close", (e) => {
@@ -119,7 +122,8 @@ class MailWindowController {
             // in an array if your app supports multi windows, this is the time
             // when you should delete the corresponding element.
             this.win = null
-        })
+            workLog.uninitialize();
+        });
 
         // Open the new window in external browser
         this.win.webContents.on("new-window", this.openInBrowser)
@@ -164,7 +168,8 @@ class MailWindowController {
             show: false,
             frame: false,
             webPreferences: {
-                nodeIntegration: true
+                nodeIntegration: true,
+                contextIsolation: false
             }
         });
         this.notifyWin.loadURL(`file://${path.join(__dirname, '../view/notify.html')}`);
