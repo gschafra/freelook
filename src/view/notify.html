@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #wrapper {
+            min-height: 100%;
+            padding: 0px;
+            margin: 0px;
+        }
+
+        #wrapper2 {
+            padding: 10px;
+        }
+
+        body {
+            background: #333;
+            color: #DDD;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            cursor: pointer;
+        }
+
+        div#title {
+            padding-top: 14px;
+            font-size: 20pt;
+            color: #FFF;
+            text-shadow: 1px 1px 6px #678;
+            font-weight: bold;
+        }
+
+        img {
+            margin-right: 32px;
+            margin-left: 10px;
+        }
+
+        div#text {
+            font-size: 130%;
+            text-shadow: 1px 1px 1px #666;
+            padding-top: 10px;
+        }
+
+        div#close {
+            background: red;
+            color: white;
+            padding: 6px 9px;
+            font-family: monospace;
+            font-weight: bold;
+            font-size: 140%;
+            cursor: pointer;
+        }
+    </style>
+    <title>Notification</title>
+    <script>
+        if (typeof module === 'object') { window.module = module; module = undefined; }
+    </script>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script>
+        if (window.module) module = window.module;
+    </script>
+    <script>
+        function openMainWindow() {
+            require('electron').ipcRenderer.send('notifyClicked');
+        }
+        function closeNotification() {
+            require('electron').ipcRenderer.send('notifyClosed');
+        }
+        function setNotificationText(text) {
+            $('#text').text(text);
+        }
+        //setInterval('window.location=""', 500);
+    </script>
+</head>
+
+<body>
+    <div id="wrapper" onclick="openMainWindow()">
+        <div style="float: right;" id="close" onclick="closeNotification(); event.stopPropagation(); return false;">X</div>
+        <div id="wrapper2">
+            <img src="../../assets/outlook_linux_black.png" style="float: left;" />
+        <div id="title">
+            Outlook
+        </div>
+        <br clear="all">
+        <div id="text">This is the notification text.</div>
+        </div>
+    </div>
+</body>
+
+</html>

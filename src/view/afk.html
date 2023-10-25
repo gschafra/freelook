@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>AFK work</title>
+</head>
+<script>
+	window.onload = event => {
+		document.querySelector('#close').addEventListener('click', event => {
+			require('electron').ipcRenderer.send('work-log', { cmd: 'end-afk' });
+		});
+	};
+</script>
+<body style="background-color: black;">
+	<button id="close" style="font-size: 60px; cursor: pointer; margin: 200px auto; display: block; font-weight: bold;">END</button>
+</body>
+</html>

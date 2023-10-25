@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8" />
+	<title>TODO: History</title>
+</head>
+<script>
+	let ipcRenderer;
+	window.onload = () => {
+		ipcRenderer = require('electron').ipcRenderer;
+		ipcRenderer.on('work-log-history', (event, history) => {
+			document.querySelector('p').innerText = history;
+		});
+		ipcRenderer.send('work-log', { cmd: 'get-history' });
+	};
+
+</script>
+<body>
+	<h1>History</h1>
+	<p></p>
+</body>
+</html>

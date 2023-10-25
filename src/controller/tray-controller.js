@@ -33,6 +33,10 @@ class TrayController {
         ipcMain.on('updateUnread', (event, value) => {
             this.tray.setImage(this.createTrayIcon(value))
         })
+
+        this.mailController.onUpdateUnread = (value) => {
+            this.tray.setImage(this.createTrayIcon(value));
+        }
     }
 
     createTrayIcon(value) {
